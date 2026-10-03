@@ -85,7 +85,7 @@ class HeuristicEtaPredictor(
 
         return PredictionResult(
             pointEtaEpochMillis = finalArrivalEpochMillis,
-            predictedEtaHHmm = istTime.time24Short,
+            predictedEtaHHmm = istTime.time12Standard,
             predictedDelayMinutes = runningDelay,
             quantileLowerMinutes = p10Delay,
             quantileUpperMinutes = p90Delay,

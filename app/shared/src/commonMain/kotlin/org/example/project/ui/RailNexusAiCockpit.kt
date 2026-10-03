@@ -249,7 +249,7 @@ fun RailNexusAiCockpitCard(
                         // Predicted Point ETA
                         Row(verticalAlignment = Alignment.Bottom) {
                             Text(
-                                text = prediction.predictedEtaHHmm,
+                                text = prediction.predictedEtaHHmm.toStandard12Hour(),
                                 fontSize = 26.sp,
                                 fontWeight = FontWeight.Black,
                                 color = RailTextPrimary

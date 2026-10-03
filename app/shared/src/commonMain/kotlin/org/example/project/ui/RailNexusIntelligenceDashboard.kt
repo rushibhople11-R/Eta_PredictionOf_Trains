@@ -1178,7 +1178,7 @@ private fun StationWiseDynamicEtaTable(
 
                     // Scheduled
                     Text(
-                        text = pred.stop.scheduledArrival,
+                        text = pred.stop.scheduledArrival.toStandard12Hour(),
                         color = TextMutedSlate,
                         fontSize = 11.sp,
                         modifier = Modifier.weight(1.2f)
@@ -1187,7 +1187,7 @@ private fun StationWiseDynamicEtaTable(
                     // Predicted ETA (p50 with p10-p90 spread)
                     Column(modifier = Modifier.weight(1.5f)) {
                         Text(
-                            text = pred.predictedEta,
+                            text = pred.predictedEta.toStandard12Hour(),
                             color = if (pred.delayMinutes > 15) DangerRed else CautionAmber,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold

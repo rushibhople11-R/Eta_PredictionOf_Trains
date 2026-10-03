@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAILअंदाज • Live Nashik Rail GIS Radar (Offline Ready)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #070D18; color: #F8FAFC; }
+        
+        #canvas-container { width: 100%; height: 100%; position: relative; }
+        canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+
+        /* Floating Top Control HUD */
+        .hud-top {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            right: 14px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            pointer-events: none;
+            flex-wrap: wrap;
+        }
+        .hud-card {
+            background: rgba(11, 25, 44, 0.94);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 9px 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-title {
+            font-size: 17px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .brand-accent { color: #10B981; }
+        .offline-badge {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10B981;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10B981;
+            box-shadow: 0 0 8px #10B981;
+            animation: pulse-ring 1.6s ease-in-out infinite alternate;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.85); opacity: 0.7; }
+            100% { transform: scale(1.2); opacity: 1; }
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+        }
+        .btn-preset {
+            background: rgba(30, 41, 59, 0.85);
+            color: #CBD5E1;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .btn-preset:hover {
+            background: #10B981;
+            color: #070D18;
+            border-color: #10B981;
+            font-weight: 700;
+        }
+        .btn-preset.active {
+            background: #10B981;
+            color: #070D18;
+            font-weight: 700;
+        }
+
+        /* Floating Zoom Controls */
+        .zoom-controls {
+            position: absolute;
+            right: 18px;
+            top: 74px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .btn-icon {
+            width: 38px;
+            height: 38px;
+            background: rgba(11, 25, 44, 0.94);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: #F8FAFC;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            transition: all 0.15s ease;
+        }
+        .btn-icon:hover {
+            background: #1E3A8A;
+            color: #38BDF8;
+            border-color: #38BDF8;
+        }
+
+        /* Bottom Legend Panel */
+        .hud-bottom {
+            position: absolute;
+            bottom: 18px;
+            left: 18px;
+            z-index: 100;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .hud-legend {
+            background: rgba(11, 25, 44, 0.94);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 12px 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+            pointer-events: auto;
+            max-width: 390px;
+        }
+        .legend-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #94A3B8;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .legend-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 11px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #E2E8F0;
+        }
+        .legend-color-bar {
+            width: 14px;
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        /* Details Modal Drawer */
+        .detail-card {
+            position: absolute;
+            bottom: 18px;
+            right: 18px;
+            z-index: 100;
+            background: rgba(11, 25, 44, 0.96);
+            backdrop-filter: blur(16px);
+            border: 1px solid #38BDF8;
+            border-radius: 12px;
+            padding: 16px;
+            width: 320px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+            display: none;
+            animation: slideUp 0.25s ease-out;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+        }
+        .detail-close {
+            background: none;
+            border: none;
+            color: #94A3B8;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+        .detail-close:hover { color: #FFFFFF; }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-bottom: 6px;
+            color: #CBD5E1;
+        }
+        .detail-value { font-weight: bold; color: #F8FAFC; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="radar-canvas"></canvas>
+
+        <!-- Top Floating HUD -->
+        <div class="hud-top">
+            <div class="hud-card">
+                <div class="brand-title">
+                    <span>🚆</span>
+                    <span>RAIL<span class="brand-accent">अंदाज</span> GIS Radar</span>
+                </div>
+                <div class="offline-badge">
+                    <div class="pulse-dot"></div>
+                    <span id="network-status">⚡ 100% OFFLINE READY</span>
+                </div>
+                <div id="clock-display" style="font-family: monospace; font-size:12px; color:#94A3B8;">--:--:-- IST</div>
+            </div>
+
+            <div class="hud-card preset-buttons">
+                <button class="btn-preset active" onclick="focusPreset('NASHIK_ROAD')">🎯 Nashik Road (NK)</button>
+                <button class="btn-preset" onclick="focusPreset('DEVLALI')">🎖️ Devlali (DVL)</button>
+                <button class="btn-preset" onclick="focusPreset('BRIDGE')">🌉 Godavari Bridge</button>
+                <button class="btn-preset" onclick="focusPreset('CORRIDOR')">🗺️ Full Corridor</button>
+            </div>
+        </div>
+
+        <!-- Zoom Controls -->
+        <div class="zoom-controls">
+            <button class="btn-icon" onclick="zoomIn()" title="Zoom In">+</button>
+            <button class="btn-icon" onclick="zoomOut()" title="Zoom Out">−</button>
+            <button class="btn-icon" onclick="resetView()" title="Reset View">⟲</button>
+        </div>
+
+        <!-- Bottom Left Legend HUD -->
+        <div class="hud-bottom">
+            <div class="hud-legend">
+                <div class="legend-title">
+                    <span>Central Railway Corridor</span>
+                    <span style="color:#10B981;" id="train-counter">6 Trains Active</span>
+                </div>
+                <div class="legend-grid">
+                    <div class="legend-item">
+                        <div class="legend-color-bar" style="background:#10B981;"></div>
+                        <span>Clear (Auto Block)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color-bar" style="background:#F59E0B;"></div>
+                        <span>Caution / Regulated</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color-bar" style="background:#EF4444;"></div>
+                        <span>High Saturation</span>
+                    </div>
+                    <div class="legend-item">
+                        <span style="font-size:13px;">🏢</span>
+                        <span>Stations (12)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span style="font-size:13px;">⚡</span>
+                        <span>25kV AC Electrified</span>
+                    </div>
+                    <div class="legend-item">
+                        <span style="font-size:13px;">📡</span>
+                        <span>Zero Internet Needed</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item Detail Inspection Drawer -->
+        <div class="detail-card" id="detail-drawer">
+            <div class="detail-header">
+                <div>
+                    <h3 id="detail-title" style="font-size:14px; color:#38BDF8;">Station Details</h3>
+                    <p id="detail-subtitle" style="font-size:11px; color:#94A3B8;">Code / Category</p>
+                </div>
+                <button class="detail-close" onclick="closeDetail()">✕</button>
+            </div>
+            <div id="detail-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // Standalone pre-bundled Railway GIS Data for Nashik City Corridor (100% Offline)
+        const GIS_DATA = {
+            "stations": [
+                {"code":"IGP","name":"Igatpuri","marathiName":"इगतपुरी","lat":19.6983,"lng":73.5654,"elevation":600,"platforms":4,"category":"NSG-3","tracks":6,"desc":"Thal Ghat summit station with banking sidings."},
+                {"code":"GO","name":"Ghoti","marathiName":"घोटी","lat":19.7214,"lng":73.6543,"elevation":590,"platforms":2,"category":"NSG-6","tracks":3,"desc":"Rural wayside crossing station."},
+                {"code":"ASO","name":"Asavali","marathiName":"आसावली","lat":19.7820,"lng":73.7120,"elevation":582,"platforms":2,"category":"NSG-6","tracks":3,"desc":"Intermediate block station."},
+                {"code":"LT","name":"Lahavit","marathiName":"लहावीत","lat":19.8250,"lng":73.7460,"elevation":575,"platforms":2,"category":"NSG-6","tracks":3,"desc":"Wayside station with automatic signal overlap."},
+                {"code":"DVL","name":"Devlali","marathiName":"देवळाली","lat":19.9242,"lng":73.8310,"elevation":570,"platforms":3,"category":"NSG-4","tracks":5,"desc":"Military cantonment station & Kisan Rail hub."},
+                {"code":"NK","name":"Nashik Road","marathiName":"नाशिक रोड","lat":19.9575,"lng":73.8340,"elevation":565,"platforms":4,"category":"NSG-2","tracks":7,"desc":"Primary passenger hub serving Nashik City. Kumbh Mela concourse."},
+                {"code":"ODH","name":"Odha","marathiName":"ओढा","lat":20.0210,"lng":73.9110,"elevation":560,"platforms":2,"category":"NSG-5","tracks":4,"desc":"Godavari River Bridge approach zone."},
+                {"code":"KW","name":"Kherwadi","marathiName":"खेरवाडी","lat":20.0780,"lng":73.9780,"elevation":555,"platforms":2,"category":"NSG-6","tracks":3,"desc":"Agricultural crossing station."},
+                {"code":"KBSN","name":"Kasbe Sukene","marathiName":"कसबे सुकेणे","lat":20.1250,"lng":74.0320,"elevation":550,"platforms":2,"category":"NSG-6","tracks":3,"desc":"Vineyard belt agro goods loop."},
+                {"code":"NR","name":"Niphad","marathiName":"निफाड","lat":20.0864,"lng":74.1086,"elevation":548,"platforms":3,"category":"NSG-5","tracks":4,"desc":"Major agro-industrial station for onion & wheat."},
+                {"code":"LS","name":"Lasalgaon","marathiName":"लासलगाव","lat":20.1448,"lng":74.2389,"elevation":545,"platforms":3,"category":"NSG-4","tracks":5,"desc":"Asia's biggest onion wholesale market hub."},
+                {"code":"MMR","name":"Manmad Junction","marathiName":"मनमाड जंक्शन","lat":20.2520,"lng":74.4370,"elevation":580,"platforms":6,"category":"NSG-3","tracks":12,"desc":"Mega junction linking Mumbai, Howrah, Delhi & SCR."}
+            ],
+            "sections": [
+                {"id":"SEC-IGP-DVL","name":"Igatpuri - Devlali Mainline","lengthKm":35.8,"status":"CLEAR","saturation":78,"aspect":"🟢 PROCEED","path":[{"lat":19.6983,"lng":73.5654},{"lat":19.7214,"lng":73.6543},{"lat":19.7820,"lng":73.7120},{"lat":19.8250,"lng":73.7460},{"lat":19.9242,"lng":73.8310}]},
+                {"id":"SEC-DVL-NK","name":"Devlali - Nashik Road Urban Sector","lengthKm":4.8,"status":"OCCUPIED","saturation":92,"aspect":"🔴 DANGER / ATTENTION","path":[{"lat":19.9242,"lng":73.8310},{"lat":19.9390,"lng":73.8325},{"lat":19.9575,"lng":73.8340}]},
+                {"id":"SEC-NK-ODH","name":"Nashik Road - Odha (Godavari Crossing)","lengthKm":10.2,"status":"CAUTION","saturation":88,"aspect":"🟡 CAUTION (Bridge Zone)","path":[{"lat":19.9575,"lng":73.8340},{"lat":19.9790,"lng":73.8580},{"lat":19.9950,"lng":73.8820},{"lat":20.0210,"lng":73.9110}]},
+                {"id":"SEC-ODH-KW","name":"Odha - Kherwadi Agricultural Segment","lengthKm":8.5,"status":"CLEAR","saturation":64,"aspect":"🟢 PROCEED","path":[{"lat":20.0210,"lng":73.9110},{"lat":20.0510,"lng":73.9450},{"lat":20.0780,"lng":73.9780}]},
+                {"id":"SEC-KW-KBSN","name":"Kherwadi - Kasbe Sukene Segment","lengthKm":7.2,"status":"CLEAR","saturation":70,"aspect":"🟢 PROCEED","path":[{"lat":20.0780,"lng":73.9780},{"lat":20.1010,"lng":74.0050},{"lat":20.1250,"lng":74.0320}]},
+                {"id":"SEC-KBSN-NR","name":"Kasbe Sukene - Niphad Agro Line","lengthKm":8.6,"status":"CLEAR","saturation":74,"aspect":"🟢 PROCEED","path":[{"lat":20.1250,"lng":74.0320},{"lat":20.1050,"lng":74.0700},{"lat":20.0864,"lng":74.1086}]},
+                {"id":"SEC-NR-LS","name":"Niphad - Lasalgaon Onion Corridor","lengthKm":14.1,"status":"CLEAR","saturation":82,"aspect":"🟢 PROCEED","path":[{"lat":20.0864,"lng":74.1086},{"lat":20.1150,"lng":74.1730},{"lat":20.1448,"lng":74.2389}]},
+                {"id":"SEC-LS-MMR","name":"Lasalgaon - Manmad Junction Approach","lengthKm":25.3,"status":"CAUTION","saturation":94,"aspect":"🟡 CAUTION (Yard Hold)","path":[{"lat":20.1448,"lng":74.2389},{"lat":20.1980,"lng":74.3380},{"lat":20.2520,"lng":74.4370}]}
+            ],
+            "trains": [
+                {"trainNumber":"12109","name":"Panchavati Express","type":"Superfast","loco":"WAP-7 #30482","lat":19.9540,"lng":73.8335,"speed":44,"delay":12,"nextStation":"NK","eta":"18:42","priority":2,"status":"Decelerating for Nashik Road PF-2."},
+                {"trainNumber":"22223","name":"CSMT - Shirdi Vande Bharat","type":"Vande Bharat","loco":"Train-18 EMU","lat":19.9120,"lng":73.8240,"speed":108,"delay":0,"nextStation":"DVL","eta":"18:50","priority":1,"status":"Cruising at top speed 108 km/h. Clear green aspect."},
+                {"trainNumber":"12137","name":"Punjab Mail","type":"Superfast Mail","loco":"WAP-7 #30211","lat":20.0050,"lng":73.8950,"speed":28,"delay":8,"nextStation":"ODH","eta":"19:04","priority":2,"status":"Regulating over Godavari bridge caution zone."},
+                {"trainNumber":"12859","name":"Gitanjali Express","type":"Superfast","loco":"WAP-7 #37019","lat":20.0890,"lng":74.1120,"speed":104,"delay":22,"nextStation":"NR","eta":"19:15","priority":2,"status":"Accelerating past Niphad agro zone."},
+                {"trainNumber":"BOXN-78","name":"Lasalgaon Agro Freight","type":"Freight (BOXN)","loco":"WAG-9HC #31890","lat":20.1460,"lng":74.2410,"speed":0,"delay":45,"nextStation":"LS","eta":"Loading","priority":3,"status":"Stationary at Lasalgaon freight siding 3."},
+                {"trainNumber":"BTPN-42","name":"HPCL Manmad POL Tanker","type":"Freight (BTPN)","loco":"Twin WAG-9","lat":20.1245,"lng":74.0315,"speed":32,"delay":15,"nextStation":"KBSN","eta":"19:12","priority":3,"status":"Regulated on loop line for express run."}
+            ],
+            "river": [
+                {"lat":19.980,"lng":73.720},
+                {"lat":19.995,"lng":73.765},
+                {"lat":20.002,"lng":73.815},
+                {"lat":20.005,"lng":73.895},
+                {"lat":20.015,"lng":73.950},
+                {"lat":20.035,"lng":74.050},
+                {"lat":20.080,"lng":74.180}
+            ]
+        };
+
+        const PRESETS = {
+            NASHIK_ROAD: { lat: 19.9575, lng: 73.8340, zoom: 3.2 },
+            DEVLALI: { lat: 19.9242, lng: 73.8310, zoom: 3.0 },
+            BRIDGE: { lat: 20.0050, lng: 73.8950, zoom: 2.8 },
+            CORRIDOR: { lat: 19.9800, lng: 73.9800, zoom: 1.0 }
+        };
+
+        // Canvas Setup & State
+        const canvas = document.getElementById('radar-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        let centerLat = 19.9575;
+        let centerLng = 73.8340;
+        let zoom = 2.5;
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let animFrame = 0;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            render();
+        });
+
+        // Geographic Projection (Mercator-approx for Nashik bounding box)
+        function project(lat, lng) {
+            const scale = Math.min(width, height) * 0.9 * zoom;
+            const x = width / 2 + (lng - centerLng) * scale * 1.08;
+            const y = height / 2 - (lat - centerLat) * scale;
+            return { x, y };
+        }
+
+        function unproject(x, y) {
+            const scale = Math.min(width, height) * 0.9 * zoom;
+            const lng = centerLng + (x - width / 2) / (scale * 1.08);
+            const lat = centerLat - (y - height / 2) / scale;
+            return { lat, lng };
+        }
+
+        // Clock
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false }) + ' IST';
+            document.getElementById('clock-display').innerText = timeStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Main Render Loop
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+
+            // 1. Background Grid & Radar Circles
+            ctx.fillStyle = '#070D18';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.strokeStyle = 'rgba(30, 58, 138, 0.22)';
+            ctx.lineWidth = 1;
+            const step = 60 * (zoom > 2 ? 1.5 : 1);
+            for (let x = 0; x < width; x += step) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+            }
+            for (let y = 0; y < height; y += step) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+            }
+
+            // Radar Range Rings around Center
+            const centerPt = project(centerLat, centerLng);
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.12)';
+            for (let r = 80; r < Math.max(width, height); r += 140) {
+                ctx.beginPath();
+                ctx.arc(centerPt.x, centerPt.y, r * (zoom * 0.5), 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // 2. Draw Godavari River
+            ctx.strokeStyle = '#0284C7';
+            ctx.lineWidth = 4 * Math.sqrt(zoom);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            GIS_DATA.river.forEach((p, idx) => {
+                const pt = project(p.lat, p.lng);
+                if (idx === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+            });
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.5)';
+            ctx.font = '10px system-ui';
+            const riverLabelPt = project(20.005, 73.895);
+            ctx.fillText('🌊 Godavari River', riverLabelPt.x + 12, riverLabelPt.y - 12);
+
+            // 3. Draw Railway Block Sections
+            GIS_DATA.sections.forEach(sec => {
+                const color = sec.status === 'CLEAR' ? '#10B981' : (sec.status === 'CAUTION' ? '#F59E0B' : '#EF4444');
+                
+                // Track glow
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 6 * Math.sqrt(zoom);
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                sec.path.forEach((p, idx) => {
+                    const pt = project(p.lat, p.lng);
+                    if (idx === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+                });
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Inner track core
+                ctx.strokeStyle = '#F8FAFC';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // 4. Draw Stations
+            GIS_DATA.stations.forEach(stn => {
+                const pt = project(stn.lat, stn.lng);
+
+                // Outer halo
+                ctx.fillStyle = stn.code === 'NK' ? '#F59E0B' : '#10B981';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, stn.code === 'NK' ? 8 : 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Station Center
+                ctx.fillStyle = '#070D18';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, stn.code === 'NK' ? 4 : 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Label card
+                ctx.fillStyle = 'rgba(11, 25, 44, 0.9)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 1;
+                const label = `${stn.name} (${stn.code})`;
+                ctx.font = 'bold 11px system-ui';
+                const textWidth = ctx.measureText(label).width;
+                const boxX = pt.x + 10;
+                const boxY = pt.y - 16;
+                ctx.fillRect(boxX - 4, boxY - 11, textWidth + 8, 17);
+                ctx.strokeRect(boxX - 4, boxY - 11, textWidth + 8, 17);
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillText(label, boxX, boxY);
+
+                if (zoom > 2) {
+                    ctx.fillStyle = '#94A3B8';
+                    ctx.font = '9px system-ui';
+                    ctx.fillText(`${stn.marathiName} • PF:${stn.platforms}`, boxX, boxY + 14);
+                }
+            });
+
+            // 5. Draw Live Trains (Interpolated / Animated)
+            const pulse = (Math.sin(animFrame * 0.05) + 1) / 2;
+            GIS_DATA.trains.forEach(t => {
+                const pt = project(t.lat, t.lng);
+                const trainColor = t.priority === 1 ? '#38BDF8' : (t.priority === 2 ? '#10B981' : '#F59E0B');
+
+                // Pulsing radar ring
+                ctx.strokeStyle = trainColor;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 10 + pulse * 14, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Train Diamond Marker
+                ctx.fillStyle = trainColor;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 7, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Train Badge Label
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+                ctx.strokeStyle = trainColor;
+                ctx.lineWidth = 1.5;
+                const badge = `🚆 ${t.trainNumber} (${t.speed} km/h)`;
+                ctx.font = 'bold 10px system-ui';
+                const badgeWidth = ctx.measureText(badge).width;
+                ctx.fillRect(pt.x - badgeWidth/2 - 5, pt.y - 28, badgeWidth + 10, 16);
+                ctx.strokeRect(pt.x - badgeWidth/2 - 5, pt.y - 28, badgeWidth + 10, 16);
+
+                ctx.fillStyle = '#F8FAFC';
+                ctx.fillText(badge, pt.x - badgeWidth/2, pt.y - 16);
+            });
+
+            animFrame++;
+            requestAnimationFrame(render);
+        }
+
+        // Mouse Drag Panning
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            startX = e.clientX;
+            startY = e.clientY;
+
+            const scale = Math.min(width, height) * 0.9 * zoom;
+            centerLng -= dx / (scale * 1.08);
+            centerLat += dy / scale;
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        // Wheel Zooming
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+            zoom = Math.max(0.6, Math.min(8.0, zoom * zoomFactor));
+        }, { passive: false });
+
+        // Touch Support
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            }
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isDragging || e.touches.length !== 1) return;
+            const dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            const scale = Math.min(width, height) * 0.9 * zoom;
+            centerLng -= dx / (scale * 1.08);
+            centerLat += dy / scale;
+        });
+        canvas.addEventListener('touchend', () => { isDragging = false; });
+
+        // Click Inspection
+        canvas.addEventListener('click', (e) => {
+            const clickX = e.clientX;
+            const clickY = e.clientY;
+
+            // Check trains
+            for (const t of GIS_DATA.trains) {
+                const pt = project(t.lat, t.lng);
+                const dist = Math.hypot(pt.x - clickX, pt.y - clickY);
+                if (dist < 20) {
+                    showDetail("🚆 " + t.trainNumber + " - " + t.name, t.type, [
+                        { label: "Locomotive", val: t.loco },
+                        { label: "Live Speed", val: t.speed + " km/h" },
+                        { label: "Delay", val: t.delay === 0 ? "ON TIME" : "+" + t.delay + " min" },
+                        { label: "Next Station", val: t.nextStation + " (ETA: " + t.eta + ")" },
+                        { label: "Status", val: t.status }
+                    ]);
+                    return;
+                }
+            }
+
+            // Check stations
+            for (const s of GIS_DATA.stations) {
+                const pt = project(s.lat, s.lng);
+                const dist = Math.hypot(pt.x - clickX, pt.y - clickY);
+                if (dist < 20) {
+                    showDetail("🏢 " + s.name + " (" + s.code + ")", s.marathiName + " • " + s.category, [
+                        { label: "Platforms", val: s.platforms },
+                        { label: "Tracks", val: s.tracks },
+                        { label: "Elevation", val: s.elevation + " m" },
+                        { label: "Overview", val: s.desc }
+                    ]);
+                    return;
+                }
+            }
+        });
+
+        function showDetail(title, subtitle, rows) {
+            document.getElementById('detail-title').innerText = title;
+            document.getElementById('detail-subtitle').innerText = subtitle;
+            const content = document.getElementById('detail-content');
+            content.innerHTML = rows.map(r => `
+                <div class="detail-row">
+                    <span>${r.label}</span>
+                    <span class="detail-value">${r.val}</span>
+                </div>
+            `).join('');
+            document.getElementById('detail-drawer').style.display = 'block';
+        }
+
+        function closeDetail() {
+            document.getElementById('detail-drawer').style.display = 'none';
+        }
+
+        function zoomIn() { zoom = Math.min(8.0, zoom * 1.3); }
+        function zoomOut() { zoom = Math.max(0.6, zoom / 1.3); }
+        function resetView() { focusPreset('NASHIK_ROAD'); }
+
+        function focusPreset(key) {
+            document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+            if (event && event.target && event.target.classList) {
+                event.target.classList.add('active');
+            }
+            const p = PRESETS[key];
+            if (p) {
+                centerLat = p.lat;
+                centerLng = p.lng;
+                zoom = p.zoom;
+            }
+        }
+
+        // Start render
+        render();
+    </script>
+</body>
+</html>

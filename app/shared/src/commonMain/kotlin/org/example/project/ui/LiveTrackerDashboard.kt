@@ -38,6 +38,7 @@ import org.example.project.model.IstTime
 import org.example.project.model.ScheduleStop
 import org.example.project.model.StopPrediction
 import org.example.project.model.TrainJourney
+import org.example.project.model.toStandard12Hour
 import org.example.project.network.RailNexusLiveStreamClient
 import org.example.project.network.ServerConnectionStatus
 import org.example.project.ui.theme.*
@@ -807,7 +808,7 @@ fun LiveTelemetryCockpitCard(
                             color = RailAmber
                         )
                         Text(
-                            text = "➔ ${nextStop.scheduledArrival} IST (${nextStop.station.code})",
+                            text = "➔ ${nextStop.scheduledArrival.toStandard12Hour()} IST (${nextStop.station.code})",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = RailTextPrimary,
@@ -1161,7 +1162,7 @@ fun ClearDestinationEtaCard(
                 Column(modifier = Modifier.weight(1f, fill = false)) {
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
-                            text = "${destinationPred.predictedEta} IST",
+                            text = "${destinationPred.predictedEta.toStandard12Hour()} IST",
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Black,
                             color = if (isDelayed) RailAmber else RailGreen
@@ -1178,7 +1179,7 @@ fun ClearDestinationEtaCard(
 
                     if (isDelayed) {
                         Text(
-                            text = "Scheduled Arrival: ${destStop.scheduledArrival} IST",
+                            text = "Scheduled Arrival: ${destStop.scheduledArrival.toStandard12Hour()} IST",
                             fontSize = 11.sp,
                             textDecoration = TextDecoration.LineThrough,
                             color = RailMuted
@@ -1514,14 +1515,14 @@ fun CleanStationRow(
                     // Times
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "${prediction.predictedEta} IST",
+                            text = "${prediction.predictedEta.toStandard12Hour()} IST",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = if (isDelayed) RailAmber else RailGreen
                         )
                         if (isDelayed) {
                             Text(
-                                text = "Sched: ${stop.scheduledArrival} IST",
+                                text = "Sched: ${stop.scheduledArrival.toStandard12Hour()} IST",
                                 fontSize = 10.sp,
                                 textDecoration = TextDecoration.LineThrough,
                                 color = RailMuted

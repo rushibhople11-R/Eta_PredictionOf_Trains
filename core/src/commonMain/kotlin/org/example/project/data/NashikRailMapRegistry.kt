@@ -70,6 +70,45 @@ object NashikRailMapRegistry {
 
     val STATIONS: List<NashikStationGeoNode> = listOf(
         NashikStationGeoNode(
+            code = "CSMT",
+            name = "Mumbai CSMT",
+            marathiName = "मुंबई छत्रपती शिवाजी महाराज टर्मिनस",
+            location = GeoPoint(lat = 18.9401, lng = 72.8354),
+            elevationMeters = 11,
+            platformsCount = 18,
+            isJunction = true,
+            stationCategory = "NSG-1",
+            tracksCount = 22,
+            description = "UNESCO World Heritage Terminal & Headquarters of Central Railway. Primary origin terminus for Panchavati, Vande Bharat, and Punjab Mail.",
+            features = listOf("Central Railway HQ", "18 Long-Distance Platforms", "Heritage Concourse", "Primary Origin Junction")
+        ),
+        NashikStationGeoNode(
+            code = "KYN",
+            name = "Kalyan Junction",
+            marathiName = "कल्याण जंक्शन",
+            location = GeoPoint(lat = 19.2437, lng = 73.1355),
+            elevationMeters = 15,
+            platformsCount = 8,
+            isJunction = true,
+            stationCategory = "NSG-2",
+            tracksCount = 10,
+            description = "Major Mumbai suburban and express bifurcation junction separating the Kasara/Nashik and Karjat/Pune corridors.",
+            features = listOf("8 Platforms", "Suburban Quadruple Junction", "Electric Loco Shed (ELS)")
+        ),
+        NashikStationGeoNode(
+            code = "KSRA",
+            name = "Kasara",
+            marathiName = "कसारा",
+            location = GeoPoint(lat = 19.6450, lng = 73.4850),
+            elevationMeters = 280,
+            platformsCount = 4,
+            isJunction = false,
+            stationCategory = "NSG-5",
+            tracksCount = 6,
+            description = "Foot of the Thal Ghat. Mandatory technical brake test halt and banking locomotive attachment station for the 1:37 ascent to Igatpuri.",
+            features = listOf("Banking Loco Attachment", "Brake Testing Siding", "Foot of Thal Ghat")
+        ),
+        NashikStationGeoNode(
             code = "IGP",
             name = "Igatpuri",
             marathiName = "इगतपुरी",
@@ -228,6 +267,65 @@ object NashikRailMapRegistry {
     )
 
     val SECTIONS: List<NashikRailSection> = listOf(
+        NashikRailSection(
+            sectionId = "SEC-CSMT-KYN",
+            fromStationCode = "CSMT",
+            toStationCode = "KYN",
+            name = "Mumbai CSMT - Kalyan Suburban & Mainline Corridor",
+            lengthKm = 53.8,
+            trackType = "Quadruple Electrified (25kV AC)",
+            signalingSystem = "AUTOMATIC_BLOCK",
+            maxPermissibleSpeedKmph = 105,
+            temporarySpeedRestrictionKmph = null,
+            lineSaturationPercent = 96,
+            currentSignalAspect = "GREEN (Proceed)",
+            status = "CLEAR",
+            pathPoints = listOf(
+                GeoPoint(18.9401, 72.8354), // CSMT
+                GeoPoint(19.0178, 72.8478), // Dadar
+                GeoPoint(19.1860, 72.9754), // Thane
+                GeoPoint(19.2437, 73.1355)  // Kalyan
+            )
+        ),
+        NashikRailSection(
+            sectionId = "SEC-KYN-KSRA",
+            fromStationCode = "KYN",
+            toStationCode = "KSRA",
+            name = "Kalyan - Kasara Northeast Mainline",
+            lengthKm = 67.2,
+            trackType = "Double Electrified (25kV AC)",
+            signalingSystem = "AUTOMATIC_BLOCK",
+            maxPermissibleSpeedKmph = 110,
+            temporarySpeedRestrictionKmph = null,
+            lineSaturationPercent = 84,
+            currentSignalAspect = "GREEN (Proceed)",
+            status = "CLEAR",
+            pathPoints = listOf(
+                GeoPoint(19.2437, 73.1355), // Kalyan
+                GeoPoint(19.3400, 73.2200), // Titwala
+                GeoPoint(19.5100, 73.3400), // Asangaon
+                GeoPoint(19.6450, 73.4850)  // Kasara
+            )
+        ),
+        NashikRailSection(
+            sectionId = "SEC-KSRA-IGP",
+            fromStationCode = "KSRA",
+            toStationCode = "IGP",
+            name = "Kasara - Igatpuri Thal Ghat Incline (1:37 Gradient)",
+            lengthKm = 16.0,
+            trackType = "Triple Electrified Banking Incline",
+            signalingSystem = "ABSOLUTE_BLOCK",
+            maxPermissibleSpeedKmph = 65,
+            temporarySpeedRestrictionKmph = 50,
+            lineSaturationPercent = 90,
+            currentSignalAspect = "DOUBLE_YELLOW (Attention)",
+            status = "CAUTION",
+            pathPoints = listOf(
+                GeoPoint(19.6450, 73.4850), // Kasara
+                GeoPoint(19.6700, 73.5250), // Thal Ghat viaduct
+                GeoPoint(19.6983, 73.5654)  // Igatpuri Summit
+            )
+        ),
         NashikRailSection(
             sectionId = "SEC-IGP-DVL",
             fromStationCode = "IGP",
@@ -397,7 +495,7 @@ object NashikRailMapRegistry {
             delayMinutes = 12,
             currentSectionId = "SEC-DVL-NK",
             nextStationCode = "NK",
-            estimatedArrivalAtNextStation = "18:42",
+            estimatedArrivalAtNextStation = "6:42 PM",
             priorityLevel = 2,
             statusText = "Decelerating on home signal for Nashik Road PF-2. Speed 44 km/h."
         ),
@@ -412,7 +510,7 @@ object NashikRailMapRegistry {
             delayMinutes = 0,
             currentSectionId = "SEC-IGP-DVL",
             nextStationCode = "DVL",
-            estimatedArrivalAtNextStation = "18:50",
+            estimatedArrivalAtNextStation = "6:50 PM",
             priorityLevel = 1,
             statusText = "Cruising at top speed 108 km/h. Clear green aspect in block section."
         ),
@@ -427,7 +525,7 @@ object NashikRailMapRegistry {
             delayMinutes = 8,
             currentSectionId = "SEC-NK-ODH",
             nextStationCode = "ODH",
-            estimatedArrivalAtNextStation = "19:04",
+            estimatedArrivalAtNextStation = "7:04 PM",
             priorityLevel = 2,
             statusText = "Regulating over Godavari bridge caution zone at 28 km/h."
         ),
@@ -442,7 +540,7 @@ object NashikRailMapRegistry {
             delayMinutes = 22,
             currentSectionId = "SEC-KBSN-NR",
             nextStationCode = "NR",
-            estimatedArrivalAtNextStation = "19:15",
+            estimatedArrivalAtNextStation = "7:15 PM",
             priorityLevel = 2,
             statusText = "Accelerating past Niphad agro zone. Right time run attempt."
         ),
@@ -472,9 +570,24 @@ object NashikRailMapRegistry {
             delayMinutes = 15,
             currentSectionId = "SEC-KW-KBSN",
             nextStationCode = "KBSN",
-            estimatedArrivalAtNextStation = "19:12",
+            estimatedArrivalAtNextStation = "7:12 PM",
             priorityLevel = 3,
             statusText = "Regulated on loop line to give precedence to Vande Bharat."
+        ),
+        NashikLiveTrainMarker(
+            trainNumber = "12111",
+            trainName = "CSMT - Amravati SF Express",
+            trainType = "Superfast Express",
+            locomotive = "WAP-7 #30312 (KYN Shed)",
+            currentPosition = GeoPoint(lat = 19.0178, lng = 72.8478), // Passing Dadar Central, departed CSMT
+            headingDegrees = 35.0,
+            speedKmph = 62,
+            delayMinutes = 0,
+            currentSectionId = "SEC-CSMT-KYN",
+            nextStationCode = "KYN",
+            estimatedArrivalAtNextStation = "7:45 PM",
+            priorityLevel = 2,
+            statusText = "Departed Mumbai CSMT on time. Cruising through Dadar Central towards Kalyan."
         )
     )
 

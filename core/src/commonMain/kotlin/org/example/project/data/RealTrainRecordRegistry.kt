@@ -1,7 +1,6 @@
 package org.example.project.data
 
-import org.example.project.model.Station
-import org.example.project.model.TrainType
+import org.example.project.model.*
 
 data class RealStopRecord(
     val stationCode: String,
@@ -31,7 +30,69 @@ data class RealTrainProfile(
     val onTimePunctuality30Days: Double,
     val commonDelayHotspots: List<String>,
     val stops: List<RealStopRecord>
-)
+) {
+    fun getScheduleStatus(currentIst: IstTime): TrainScheduleActiveStatus {
+        val firstStop = stops.firstOrNull() ?: return TrainScheduleActiveStatus(
+            status = OfficialRunStatus.UPCOMING_TODAY,
+            badgeText = "SCHEDULED",
+            isCurrentlyActive = false,
+            scheduledStartFormatted = "",
+            scheduledEndFormatted = "",
+            exactDynamicArrivalAtNashik = "",
+            scheduledArrivalAtNashik = "",
+            delayMinutes = 0,
+            statusNote = ""
+        )
+        val lastStop = stops.last()
+        val nkStop = stops.find { it.stationCode == "NK" }
+        val maxDelay = stops.map { it.delayMinutes }.maxOrNull() ?: 0
+        return evaluateTrainScheduleStatus(
+            startDepTime = firstStop.scheduledDeparture,
+            endArrTime = lastStop.scheduledArrival,
+            delayMinutes = maxDelay,
+            currentIst = currentIst,
+            scheduledAtNashik = nkStop?.scheduledArrival ?: ""
+        )
+    }
+
+    fun getStopsWithDynamicStatus(currentIst: IstTime): List<RealStopRecord> {
+        val schedStatus = getScheduleStatus(currentIst)
+        val currentMin = currentIst.hour * 60 + currentIst.minute
+
+        if (schedStatus.status == OfficialRunStatus.UPCOMING_TODAY) {
+            return stops.mapIndexed { idx, stop ->
+                stop.copy(
+                    status = if (idx == 0) "SCHEDULED" else "UPCOMING",
+                    actualArrivalOrEta = calculateExactDynamicEta(stop.scheduledArrival, stop.delayMinutes)
+                )
+            }
+        }
+        if (schedStatus.status == OfficialRunStatus.COMPLETED_TODAY) {
+            return stops.map { stop ->
+                stop.copy(
+                    status = "DEPARTED",
+                    actualArrivalOrEta = calculateExactDynamicEta(stop.scheduledArrival, stop.delayMinutes)
+                )
+            }
+        }
+
+        var currentFound = false
+        return stops.map { stop ->
+            val exactEta = calculateExactDynamicEta(stop.scheduledArrival, stop.delayMinutes)
+            val stopDepMin = parseTimeToMinutes(stop.scheduledDeparture) + stop.delayMinutes
+            val isPast = currentMin > stopDepMin
+            val status = when {
+                isPast -> "DEPARTED"
+                !currentFound -> {
+                    currentFound = true
+                    "CURRENT"
+                }
+                else -> "UPCOMING"
+            }
+            stop.copy(status = status, actualArrivalOrEta = exactEta)
+        }
+    }
+}
 
 object RealTrainRecordRegistry {
 
@@ -211,6 +272,15 @@ object RealTrainRecordRegistry {
     )
 
     fun getAllRealTrains(): List<RealTrainProfile> = masterTrainList
+
+    /**
+     * Returns only trains that are actively running on tracks according to their official timetable
+     * relative to current Indian Standard Time.
+     */
+    fun getActiveRealTrains(currentIst: IstTime): List<RealTrainProfile> {
+        val active = masterTrainList.filter { it.getScheduleStatus(currentIst).isCurrentlyActive }
+        return if (active.isNotEmpty()) active else masterTrainList.filter { it.getScheduleStatus(currentIst).status != OfficialRunStatus.COMPLETED_TODAY }
+    }
 
     fun getTrainByNumber(trainNumber: String): RealTrainProfile? {
         val cleanNumber = trainNumber.trim()

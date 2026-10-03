@@ -90,10 +90,10 @@ class CorridorSimulationEngine(
             currentSection = "Igatpuri - Devlali Plateau",
             nextStationCode = "DVL",
             distanceRemainingToNashikKm = 28.0,
-            scheduledArrivalAtNashik = "09:30",
+            scheduledArrivalAtNashik = "9:30 AM",
             currentDelayMinutes = 4,
             predictedDelayMinutes = 4,
-            predictedEtaAtNashik = "09:34",
+            predictedEtaAtNashik = "9:34 AM",
             assignedPlatform = "Pf 2",
             blockId = "BLOCK_IGP_DVL",
             operationalNote = "Thal Ghat banking detached at IGP; running smoothly"
@@ -110,10 +110,10 @@ class CorridorSimulationEngine(
             currentSection = "Kasara - Igatpuri Thal Ghat",
             nextStationCode = "IGP",
             distanceRemainingToNashikKm = 62.0,
-            scheduledArrivalAtNashik = "10:15",
+            scheduledArrivalAtNashik = "10:15 AM",
             currentDelayMinutes = 8,
             predictedDelayMinutes = 11,
-            predictedEtaAtNashik = "10:26",
+            predictedEtaAtNashik = "10:26 AM",
             assignedPlatform = "Pf 1",
             blockId = "BLOCK_KSRA_IGP",
             operationalNote = "Banking engines (WAG-9) attached; ascending 1:37 grade"
@@ -130,10 +130,10 @@ class CorridorSimulationEngine(
             currentSection = "Kalyan - Kasara Plain",
             nextStationCode = "KSRA",
             distanceRemainingToNashikKm = 88.0,
-            scheduledArrivalAtNashik = "11:45",
+            scheduledArrivalAtNashik = "11:45 AM",
             currentDelayMinutes = 14,
             predictedDelayMinutes = 18,
-            predictedEtaAtNashik = "12:03",
+            predictedEtaAtNashik = "12:03 PM",
             assignedPlatform = "Pf 3",
             blockId = "BLOCK_KYN_KSRA",
             operationalNote = "Approaching Kasara for mandatory brake test"
@@ -150,10 +150,10 @@ class CorridorSimulationEngine(
             currentSection = "Kalyan - Kasara Plain",
             nextStationCode = "KSRA",
             distanceRemainingToNashikKm = 102.0,
-            scheduledArrivalAtNashik = "08:45",
+            scheduledArrivalAtNashik = "8:45 AM",
             currentDelayMinutes = 22,
             predictedDelayMinutes = 25,
-            predictedEtaAtNashik = "09:10",
+            predictedEtaAtNashik = "9:10 AM",
             assignedPlatform = "Pf 1",
             blockId = "BLOCK_KYN_KSRA",
             operationalNote = "Following behind Punjab Mail with safe block headway"
@@ -170,10 +170,10 @@ class CorridorSimulationEngine(
             currentSection = "Odha - Lasalgaon",
             nextStationCode = "LS",
             distanceRemainingToNashikKm = 0.0, // Already crossed Nashik
-            scheduledArrivalAtNashik = "07:20",
+            scheduledArrivalAtNashik = "7:20 AM",
             currentDelayMinutes = 5,
             predictedDelayMinutes = 5,
-            predictedEtaAtNashik = "07:25",
+            predictedEtaAtNashik = "7:25 AM",
             assignedPlatform = "Pf 2",
             blockId = "BLOCK_ODH_LS",
             operationalNote = "Departed Nashik Road on time; heading towards Manmad"
@@ -190,10 +190,10 @@ class CorridorSimulationEngine(
             currentSection = "Devlali - Nashik Road",
             nextStationCode = "NK",
             distanceRemainingToNashikKm = 6.0,
-            scheduledArrivalAtNashik = "15:45",
+            scheduledArrivalAtNashik = "3:45 PM",
             currentDelayMinutes = 2,
             predictedDelayMinutes = 3,
-            predictedEtaAtNashik = "15:48",
+            predictedEtaAtNashik = "3:48 PM",
             assignedPlatform = "Pf 2",
             blockId = "BLOCK_DVL_NK",
             operationalNote = "Slowing down for Nashik Road outer approach signal"
@@ -210,10 +210,10 @@ class CorridorSimulationEngine(
             currentSection = "Igatpuri - Devlali Plateau",
             nextStationCode = "DVL",
             distanceRemainingToNashikKm = 34.0,
-            scheduledArrivalAtNashik = "22:10",
+            scheduledArrivalAtNashik = "10:10 PM",
             currentDelayMinutes = 6,
             predictedDelayMinutes = 7,
-            predictedEtaAtNashik = "22:17",
+            predictedEtaAtNashik = "10:17 PM",
             assignedPlatform = "Pf 3",
             blockId = "BLOCK_IGP_DVL",
             operationalNote = "Cruising on double line section towards Nashik"
@@ -288,13 +288,24 @@ class CorridorSimulationEngine(
             }
 
             val dynamicPredictedDelay = train.predictedDelayMinutes + extraDelay
-            val scheduledParts = train.scheduledArrivalAtNashik.split(":")
-            val schedH = scheduledParts.getOrNull(0)?.toIntOrNull() ?: 9
+            val cleanSched = train.scheduledArrivalAtNashik.trim().uppercase()
+            val isPm = cleanSched.endsWith("PM")
+            val isAm = cleanSched.endsWith("AM")
+            val coreTime = cleanSched.replace("AM", "").replace("PM", "").trim()
+            val scheduledParts = coreTime.split(":")
+            var schedH = scheduledParts.getOrNull(0)?.toIntOrNull() ?: 9
             val schedM = scheduledParts.getOrNull(1)?.toIntOrNull() ?: 30
+            if (isPm && schedH < 12) schedH += 12
+            if (isAm && schedH == 12) schedH = 0
             val totalMins = (schedH * 60 + schedM + dynamicPredictedDelay) % (24 * 60)
-            val etaH = totalMins / 60
+            val etaH24 = totalMins / 60
             val etaM = totalMins % 60
-            val newEta = "${etaH.toString().padStart(2, '0')}:${etaM.toString().padStart(2, '0')}"
+            val amPm = if (etaH24 >= 12) "PM" else "AM"
+            val etaH12 = when (val h = etaH24 % 12) {
+                0 -> 12
+                else -> h
+            }
+            val newEta = "$etaH12:${etaM.toString().padStart(2, '0')} $amPm"
 
             val effectiveSpeed = if (isHeld) 0.0 else (block?.speedRestrictionKmph?.toDouble() ?: train.currentSpeedKmH)
 

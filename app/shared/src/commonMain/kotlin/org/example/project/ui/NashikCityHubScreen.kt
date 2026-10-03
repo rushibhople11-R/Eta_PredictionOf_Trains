@@ -446,7 +446,7 @@ fun LiveStationTrainCard(
                 Column {
                     Text(text = "Scheduled Time (IST)", fontSize = 10.sp, color = RailMuted)
                     Text(
-                        text = "${train.scheduledArrival} Arr / ${train.scheduledDeparture} Dep",
+                        text = "${train.scheduledArrival.toStandard12Hour()} Arr / ${train.scheduledDeparture.toStandard12Hour()} Dep",
                         fontSize = 12.sp,
                         color = RailTextSecondary,
                         textDecoration = if (isDelayed) TextDecoration.LineThrough else TextDecoration.None
@@ -456,7 +456,7 @@ fun LiveStationTrainCard(
                 Column(horizontalAlignment = Alignment.End) {
                     Text(text = "Predicted ETA (IST)", fontSize = 10.sp, color = RailCyan)
                     Text(
-                        text = "${train.predictedArrivalEta} Arr",
+                        text = "${train.predictedArrivalEta.toStandard12Hour()} Arr",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Black,
                         color = if (isDelayed) RailAmber else RailGreen

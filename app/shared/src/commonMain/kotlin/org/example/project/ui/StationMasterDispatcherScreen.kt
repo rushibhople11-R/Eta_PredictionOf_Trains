@@ -824,7 +824,7 @@ fun StationMasterDispatcherScreen(
                                             fontSize = 12.sp
                                         )
                                         Text(
-                                            text = "Nashik ETA: ${train.predictedEtaAtNashik} (Sched: ${train.scheduledArrivalAtNashik})",
+                                            text = "Nashik ETA: ${train.predictedEtaAtNashik.toStandard12Hour()} (Sched: ${train.scheduledArrivalAtNashik.toStandard12Hour()})",
                                             color = Color(0xFF38BDF8),
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold

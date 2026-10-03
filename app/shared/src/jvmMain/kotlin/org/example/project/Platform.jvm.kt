@@ -105,6 +105,7 @@ actual fun openPlatformBrowser(url: String) {
             }
             if (!serverActive) {
                 val candidatePaths = listOf(
+                    java.io.File("nashik_rail_map.html"),
                     java.io.File("dist/nashik_rail_map.html"),
                     java.io.File("../dist/nashik_rail_map.html"),
                     java.io.File("c:/Projects/Eta_PredictionOf_Trains/dist/nashik_rail_map.html")
@@ -112,6 +113,17 @@ actual fun openPlatformBrowser(url: String) {
                 val existing = candidatePaths.find { it.exists() }
                 if (existing != null) {
                     targetUrl = existing.toURI().toString()
+                } else {
+                    try {
+                        val stream = Thread.currentThread().contextClassLoader.getResourceAsStream("nashik_rail_map.html")
+                            ?: JVMPlatform::class.java.classLoader.getResourceAsStream("nashik_rail_map.html")
+                        if (stream != null) {
+                            val temp = java.io.File.createTempFile("nashik_rail_map_", ".html")
+                            temp.deleteOnExit()
+                            temp.outputStream().use { out -> stream.copyTo(out) }
+                            targetUrl = temp.toURI().toString()
+                        }
+                    } catch (_: Exception) {}
                 }
             }
         }

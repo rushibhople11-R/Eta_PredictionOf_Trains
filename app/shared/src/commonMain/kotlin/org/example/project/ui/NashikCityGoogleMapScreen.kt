@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import org.example.project.data.*
 import org.example.project.getCurrentEpochMillis
+import org.example.project.model.toStandard12Hour
 import org.example.project.openPlatformBrowser
 import kotlin.math.cos
 import kotlin.math.sin
@@ -166,7 +167,7 @@ fun NashikCityGoogleMapScreen(
                                 }
                             }
                             Text(
-                                text = "Central Railway • Igatpuri - Devlali - Nashik Road - Manmad Corridor",
+                                text = "Central Railway • Mumbai CSMT - Kalyan - Kasara - Igatpuri - Nashik Road - Manmad Corridor",
                                 color = TextMuted,
                                 fontSize = 11.sp
                             )
@@ -203,6 +204,12 @@ fun NashikCityGoogleMapScreen(
                 ) {
                     // Viewport presets
                     listOf(
+                        "🏛️ Mumbai CSMT" to {
+                            panOffsetX = 320f
+                            panOffsetY = 240f
+                            zoomLevel = 1.8f
+                            selectedStation = NashikRailMapRegistry.getStation("CSMT")
+                        },
                         "🎯 Nashik Road" to {
                             panOffsetX = 0f
                             panOffsetY = 0f
@@ -215,6 +222,12 @@ fun NashikCityGoogleMapScreen(
                             zoomLevel = 1.6f
                             selectedStation = NashikRailMapRegistry.getStation("DVL")
                         },
+                        "⛰️ Thal Ghat / Kasara" to {
+                            panOffsetX = 160f
+                            panOffsetY = 110f
+                            zoomLevel = 1.8f
+                            selectedStation = NashikRailMapRegistry.getStation("KSRA")
+                        },
                         "🌉 Godavari Bridge" to {
                             panOffsetX = 80f
                             panOffsetY = -50f
@@ -224,7 +237,7 @@ fun NashikCityGoogleMapScreen(
                         "🗺️ Full Corridor" to {
                             panOffsetX = 0f
                             panOffsetY = 0f
-                            zoomLevel = 1.0f
+                            zoomLevel = 0.95f
                         }
                     ).forEach { (label, action) ->
                         Surface(
@@ -319,12 +332,12 @@ fun NashikCityGoogleMapScreen(
                 val canvasH = size.height
 
                 // Geographic bounding box mapping:
-                // West (Igatpuri: ~73.565) to East (Manmad: ~74.437) -> X axis
-                // South (Kasara: ~19.645) to North (Manmad: ~20.252) -> Y axis (inverted in canvas)
-                val minLng = 73.50
-                val maxLng = 74.48
-                val minLat = 19.65
-                val maxLat = 20.30
+                // West (Mumbai CSMT: ~72.835) to East (Manmad: ~74.437) -> X axis
+                // South (Mumbai CSMT: ~18.940) to North (Manmad: ~20.252) -> Y axis (inverted in canvas)
+                val minLng = 72.75
+                val maxLng = 74.55
+                val minLat = 18.85
+                val maxLat = 20.35
 
                 fun geoToCanvas(lat: Double, lng: Double): Offset {
                     val normX = ((lng - minLng) / (maxLng - minLng)).toFloat()
@@ -345,13 +358,23 @@ fun NashikCityGoogleMapScreen(
                 // 2.1 Background Grid / Topography based on visual mode
                 when (activeVisualLayer) {
                     MapVisualLayer.RADAR_HUD -> {
-                        // Radar rings centered around Nashik Road
+                        // Radar rings centered around Nashik Road Hub
                         val nkCenter = geoToCanvas(19.9575, 73.8340)
                         for (r in listOf(80f, 180f, 300f, 450f)) {
                             drawCircle(
                                 color = Color(0xFF1E293B).copy(alpha = 0.4f),
                                 radius = r * zoomLevel,
                                 center = nkCenter,
+                                style = Stroke(width = 1f)
+                            )
+                        }
+                        // Origin Terminal Radar beacon at Mumbai CSMT
+                        val csmtCenter = geoToCanvas(18.9401, 72.8354)
+                        for (r in listOf(60f, 130f, 220f)) {
+                            drawCircle(
+                                color = Color(0xFFF59E0B).copy(alpha = 0.25f),
+                                radius = r * zoomLevel,
+                                center = csmtCenter,
                                 style = Stroke(width = 1f)
                             )
                         }
@@ -427,9 +450,16 @@ fun NashikCityGoogleMapScreen(
                         val pos = geoToCanvas(stn.location.lat, stn.location.lng)
                         val isSelected = selectedStation?.code == stn.code
                         val isNashikRoad = stn.code == "NK"
+                        val isCsmt = stn.code == "CSMT"
 
-                        // Pulsing outer beacon for Nashik Road primary station
-                        if (isNashikRoad) {
+                        // Pulsing outer beacon for Origin Terminal (CSMT) and Primary Hub (Nashik Road)
+                        if (isCsmt) {
+                            drawCircle(
+                                color = Color(0xFFF59E0B).copy(alpha = 0.35f),
+                                radius = 22f * pulseScale * zoomLevel,
+                                center = pos
+                            )
+                        } else if (isNashikRoad) {
                             drawCircle(
                                 color = AccentGreen.copy(alpha = 0.25f),
                                 radius = 18f * pulseScale * zoomLevel,
@@ -439,13 +469,13 @@ fun NashikCityGoogleMapScreen(
 
                         // Station Node Circle
                         drawCircle(
-                            color = if (isSelected) Color.White else (if (isNashikRoad) AccentGreen else Color(0xFF38BDF8)),
-                            radius = if (isNashikRoad) 9f * zoomLevel else 6f * zoomLevel,
+                            color = if (isSelected) Color.White else (if (isCsmt) Color(0xFFF59E0B) else if (isNashikRoad) AccentGreen else Color(0xFF38BDF8)),
+                            radius = if (isCsmt) 10f * zoomLevel else if (isNashikRoad) 9f * zoomLevel else 6f * zoomLevel,
                             center = pos
                         )
                         drawCircle(
                             color = DeepNavy,
-                            radius = if (isNashikRoad) 5f * zoomLevel else 3.5f * zoomLevel,
+                            radius = if (isCsmt) 5.5f * zoomLevel else if (isNashikRoad) 5f * zoomLevel else 3.5f * zoomLevel,
                             center = pos
                         )
                     }
@@ -486,7 +516,7 @@ fun NashikCityGoogleMapScreen(
                 val canvasW = 800f
                 val canvasH = 600f
                 // We show clickable floating pills for key stations
-                if (stn.code in listOf("NK", "DVL", "ODH", "IGP", "MMR", "LS", "NR")) {
+                if (stn.code in listOf("CSMT", "KYN", "KSRA", "NK", "DVL", "ODH", "IGP", "MMR", "LS", "NR")) {
                     // Floating interactive pill in corner or relative
                 }
             }
@@ -509,7 +539,16 @@ fun NashikCityGoogleMapScreen(
                         Text(text = "SELECT STATION NODE", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(6.dp))
                         Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            listOf("NK" to "Nashik Rd", "DVL" to "Devlali", "ODH" to "Odha", "IGP" to "Igatpuri", "MMR" to "Manmad").forEach { (code, name) ->
+                            listOf(
+                                "CSMT" to "🏛️ CSMT (Origin)",
+                                "KYN" to "Kalyan",
+                                "KSRA" to "Kasara",
+                                "IGP" to "Igatpuri",
+                                "DVL" to "Devlali",
+                                "NK" to "Nashik Rd",
+                                "ODH" to "Odha",
+                                "MMR" to "Manmad"
+                            ).forEach { (code, name) ->
                                 val isSelected = selectedStation?.code == code
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
@@ -655,7 +694,7 @@ fun NashikCityGoogleMapScreen(
                                     }
                                 }
                                 Text(
-                                    text = "Loco: ${train.locomotive} • Next: ${train.nextStationCode} (ETA ${train.estimatedArrivalAtNextStation})",
+                                    text = "Loco: ${train.locomotive} • Next: ${train.nextStationCode} (ETA ${train.estimatedArrivalAtNextStation.toStandard12Hour()})",
                                     color = TextMuted,
                                     fontSize = 11.sp
                                 )

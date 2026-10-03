@@ -97,10 +97,16 @@ object ConnectionEngine {
     }
 
     private fun parseTimeToMinutes(timeStr: String): Int {
-        val parts = timeStr.split(":")
-        if (parts.size != 2) return 0
-        val h = parts[0].toIntOrNull() ?: 0
-        val m = parts[1].toIntOrNull() ?: 0
+        val clean = timeStr.trim()
+        val isPm = clean.endsWith("PM", ignoreCase = true)
+        val isAm = clean.endsWith("AM", ignoreCase = true)
+        val core = clean.replace("(?i)AM".toRegex(), "").replace("(?i)PM".toRegex(), "").trim()
+        val parts = core.split(":")
+        if (parts.size < 2) return 0
+        var h = parts[0].toIntOrNull() ?: 0
+        val m = parts[1].filter { it.isDigit() }.take(2).toIntOrNull() ?: 0
+        if (isPm && h < 12) h += 12
+        if (isAm && h == 12) h = 0
         return h * 60 + m
     }
 }

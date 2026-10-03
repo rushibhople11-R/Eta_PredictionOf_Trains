@@ -26,6 +26,7 @@ import org.example.project.engine.ContinuousRecalibrationEngine
 import org.example.project.model.ContinuousRecalibrationReport
 import org.example.project.model.LiveOperationalUpdate
 import org.example.project.model.TrainJourney
+import org.example.project.model.toStandard12Hour
 import org.example.project.ui.theme.*
 
 /**
@@ -151,7 +152,7 @@ fun RecalibrationCard(
                 // Metric 1: ETA
                 RecalibrationMetricBox(
                     title = "ETA",
-                    value = report.currentEtaHHmm,
+                    value = report.currentEtaHHmm.toStandard12Hour(),
                     highlightColor = RailCyan,
                     caption = "Target ${report.nextStationCode}",
                     modifier = Modifier.weight(1f)
@@ -160,7 +161,7 @@ fun RecalibrationCard(
                 // Metric 2: Last Updated
                 RecalibrationMetricBox(
                     title = "LAST UPDATED",
-                    value = report.lastUpdatedHHmm,
+                    value = report.lastUpdatedHHmm.toStandard12Hour(),
                     highlightColor = RailTextPrimary,
                     caption = "Telemetry Fresh",
                     modifier = Modifier.weight(1f)
@@ -169,7 +170,7 @@ fun RecalibrationCard(
                 // Metric 3: Previous ETA
                 RecalibrationMetricBox(
                     title = "PREVIOUS ETA",
-                    value = report.previousEtaHHmm,
+                    value = report.previousEtaHHmm.toStandard12Hour(),
                     highlightColor = RailMuted,
                     caption = "Prior Baseline",
                     modifier = Modifier.weight(1f)

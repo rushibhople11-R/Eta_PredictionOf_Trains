@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.example.project.data.RealStopRecord
 import org.example.project.data.RealTrainProfile
+import org.example.project.model.toStandard12Hour
 import org.example.project.data.RealTrainRecordRegistry
 import org.example.project.engine.HistoricalPunctualityEngine
 import org.example.project.engine.HistoricalTrainRunRecord
@@ -803,8 +804,8 @@ private fun StationScheduleMatrixCard(stops: List<RealStopRecord>) {
                             }
 
                             Text(text = stop.platform, fontSize = 10.sp, color = TextDark, modifier = Modifier.weight(0.5f))
-                            Text(text = "${stop.scheduledArrival} / ${stop.scheduledDeparture}", fontSize = 10.sp, color = TextMuted, modifier = Modifier.weight(1f))
-                            Text(text = stop.actualArrivalOrEta, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextDark, modifier = Modifier.weight(1f))
+                            Text(text = "${stop.scheduledArrival.toStandard12Hour()} / ${stop.scheduledDeparture.toStandard12Hour()}", fontSize = 10.sp, color = TextMuted, modifier = Modifier.weight(1f))
+                            Text(text = stop.actualArrivalOrEta.toStandard12Hour(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextDark, modifier = Modifier.weight(1f))
 
                             Text(
                                 text = if (stop.delayMinutes == 0) "RT" else "+${stop.delayMinutes}m",

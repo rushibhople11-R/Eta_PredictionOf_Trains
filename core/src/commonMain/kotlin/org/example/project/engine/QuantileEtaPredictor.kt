@@ -101,7 +101,7 @@ class QuantileEtaPredictor(
 
         return PredictionResult(
             pointEtaEpochMillis = arrivalEpochMillis,
-            predictedEtaHHmm = istTime.time24Short,
+            predictedEtaHHmm = istTime.time12Standard,
             predictedDelayMinutes = finalDelayMinutes,
             quantileLowerMinutes = p10,
             quantileUpperMinutes = p90,

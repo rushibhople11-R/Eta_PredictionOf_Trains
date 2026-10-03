@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import org.example.project.data.NashikStationData
+import org.example.project.data.RealTrainProfile
+import org.example.project.data.RealTrainRecordRegistry
 import org.example.project.engine.*
 import org.example.project.model.*
 import org.example.project.ui.theme.*
@@ -68,35 +70,23 @@ enum class ControlRoomTab(val title: String, val icon: String) {
  */
 @Composable
 fun RailNexusAiControlRoomDashboard(
-    onNavigateToLegacyTracker: () -> Unit = {},
+    onNavigateBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // Current active primary navigation tab
     var activeTab by remember { mutableStateOf(ControlRoomTab.HOME) }
-    var showDecisionWorkflow by remember { mutableStateOf(false) }
+    var selectedTrainFilter by remember { mutableStateOf("ALL") }
+    var alertFilter by remember { mutableStateOf("ALL") }
 
-    // Workflow state: Decision loop
+    // Human-in-the-Loop decision state (Pending, Approved, Rejected)
     var decisionState by remember { mutableStateOf(ControllerDecisionType.PENDING) }
     var holdMinutesValue by remember { mutableStateOf(7) }
-    var alertFilter by remember { mutableStateOf(AlertCategory.ACTIVE) }
-    var selectedTrainFilter by remember { mutableStateOf("ALL") } // ALL, ACTIVE, DELAYED
-
-    val scenario = remember { AiDecisionAndSafetyEngine.getOdhaCongestionScenario() }
-    val recommendation = remember(holdMinutesValue) {
-        AiDecisionAndSafetyEngine.generateAiRecommendation(scenario).copy(holdMinutes = holdMinutesValue)
-    }
-    val safetyAudit = remember(recommendation) {
-        AiDecisionAndSafetyEngine.auditSafety(recommendation)
-    }
+    var showDecisionWorkflow by remember { mutableStateOf(false) }
 
     val alerts = remember { AiDecisionAndSafetyEngine.getDefaultAlerts() }
     val throughputList = remember { AiDecisionAndSafetyEngine.getCorridorThroughput() }
     val reportsList = remember { AiDecisionAndSafetyEngine.getPerformanceReports() }
     val allTrains = remember { NashikStationData.allNashikTrains }
-
-    // Dynamic state affected by decision loop
-    val activeTrainsCount = 8
-    val delayedTrainsCount = if (decisionState == ControllerDecisionType.APPROVE) 5 else 6
-    val activeAlertsCount = alerts.count { it.category == AlertCategory.ACTIVE } - (if (decisionState == ControllerDecisionType.APPROVE) 1 else 0)
 
     // Dynamic interactive states: Real Indian Standard Time ticking live
     var currentIstTime by remember {
@@ -109,6 +99,11 @@ fun RailNexusAiControlRoomDashboard(
         }
     }
     val liveTimeString = currentIstTime.compactBadge
+
+    val realActiveTrains = remember(currentIstTime) { RealTrainRecordRegistry.getActiveRealTrains(currentIstTime) }
+    val activeTrainsCount = realActiveTrains.size
+    val delayedTrainsCount = realActiveTrains.count { it.getScheduleStatus(currentIstTime).delayMinutes > 0 }
+    val activeAlertsCount = alerts.count { it.category == AlertCategory.ACTIVE } - (if (decisionState == ControllerDecisionType.APPROVE) 1 else 0)
 
     val infiniteTransition = rememberInfiniteTransition()
     val livePulseAlpha by infiniteTransition.animateFloat(
@@ -126,8 +121,9 @@ fun RailNexusAiControlRoomDashboard(
 
     // Corridor search & filter interactive state
     var corridorSearchText by remember { mutableStateOf("") }
-    var corridorFilter by remember { mutableStateOf("ALL") }
-    var expandedTrainNumber by remember { mutableStateOf<String?>("12109") }
+    var corridorFilter by remember { mutableStateOf("ACTIVE") }
+    var expandedTrainNumber by remember { mutableStateOf<String?>(null) }
+    var inspectingTrainNumber by remember { mutableStateOf<String?>(null) }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize().background(ScreenBg)) {
         val isWideScreen = maxWidth >= 960.dp
@@ -280,6 +276,7 @@ fun RailNexusAiControlRoomDashboard(
                     ControlRoomTab.HOME -> {
                         HomeScreenContent(
                             isWideScreen = isWideScreen,
+                            currentIst = currentIstTime,
                             activeTrainsCount = activeTrainsCount,
                             delayedTrainsCount = delayedTrainsCount,
                             activeAlertsCount = activeAlertsCount,
@@ -307,10 +304,12 @@ fun RailNexusAiControlRoomDashboard(
                             },
                             onSelectActiveTrains = {
                                 selectedTrainFilter = "ACTIVE"
+                                inspectingTrainNumber = null
                                 activeTab = ControlRoomTab.DYNAMIC_ETA
                             },
                             onSelectDelayedTrains = {
                                 selectedTrainFilter = "DELAYED"
+                                inspectingTrainNumber = null
                                 activeTab = ControlRoomTab.DYNAMIC_ETA
                             },
                             onSelectAlerts = { activeTab = ControlRoomTab.ALERTS },
@@ -346,10 +345,18 @@ fun RailNexusAiControlRoomDashboard(
                             contentAlignment = Alignment.TopCenter
                         ) {
                             Box(modifier = Modifier.fillMaxWidth().widthIn(max = 1440.dp)) {
-                                RealTrainTrackerScreen(
-                                    initialTrainNumber = if (selectedTrainFilter == "DELAYED") "12109" else if (selectedTrainFilter == "ACTIVE") "22223" else if (selectedTrainFilter.isNotBlank() && selectedTrainFilter != "ALL") selectedTrainFilter else "12109",
-                                    onBackToHome = { activeTab = ControlRoomTab.HOME }
-                                )
+                                if (inspectingTrainNumber != null) {
+                                    RealTrainTrackerScreen(
+                                        initialTrainNumber = inspectingTrainNumber,
+                                        onBackToHome = { inspectingTrainNumber = null }
+                                    )
+                                } else {
+                                    DynamicEtaTabContent(
+                                        initialFilter = selectedTrainFilter,
+                                        currentIst = currentIstTime,
+                                        onInspectTrain = { trainNo -> inspectingTrainNumber = trainNo }
+                                    )
+                                }
                             }
                         }
                     }
@@ -880,11 +887,11 @@ private fun ContinuousRecalibrationCard(
     }
 
     val istNow = IndianStandardTime.fromEpochMillis(nowEpoch)
-    val lastUpdatedStr = istNow.time24Short
+    val lastUpdatedStr = istNow.time12Standard
 
     fun formatOffsetTime(minutesOffset: Int): String {
         val t = IndianStandardTime.fromEpochMillis(nowEpoch + (minutesOffset * 60_000L))
-        return t.time24Short
+        return t.time12Standard
     }
 
     val sampleStates = listOf(

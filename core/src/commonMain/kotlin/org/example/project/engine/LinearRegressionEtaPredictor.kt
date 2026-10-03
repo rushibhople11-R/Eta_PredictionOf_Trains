@@ -106,7 +106,7 @@ class LinearRegressionEtaPredictor(
 
         return PredictionResult(
             pointEtaEpochMillis = predictedArrivalEpoch,
-            predictedEtaHHmm = istTime.time24Short,
+            predictedEtaHHmm = istTime.time12Standard,
             predictedDelayMinutes = predictedDelayMinutes,
             quantileLowerMinutes = p10,
             quantileUpperMinutes = p90,

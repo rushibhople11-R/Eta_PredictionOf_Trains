@@ -28,6 +28,7 @@ import org.example.project.model.ConnectingService
 import org.example.project.model.ConnectionEngine
 import org.example.project.model.StopPrediction
 import org.example.project.model.TrainJourney
+import org.example.project.model.toStandard12Hour
 import org.example.project.ui.theme.*
 
 @Composable
@@ -249,7 +250,7 @@ fun ConnectionCard(
                 Column {
                     Text(text = "Your Train ETA (IST)", fontSize = 10.sp, color = RailMuted)
                     Text(
-                        text = "${evaluation.incomingArrivalEta} IST",
+                        text = "${evaluation.incomingArrivalEta.toStandard12Hour()} IST",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = RailCyan
@@ -265,7 +266,7 @@ fun ConnectionCard(
                 Column(horizontalAlignment = Alignment.End) {
                     Text(text = "Departs (${service.departurePlatform})", fontSize = 10.sp, color = RailMuted)
                     Text(
-                        text = "${service.departureTime} IST",
+                        text = "${service.departureTime.toStandard12Hour()} IST",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = RailTextPrimary
